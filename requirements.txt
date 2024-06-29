@@ -1,4 +1,4 @@
-python-on-whales
+# python-on-whales # Please install this module if you plan to launch qdrant using docker. It is not needed if you run a standalone qdrant server.
 textblob
 validators
 qdrant_client

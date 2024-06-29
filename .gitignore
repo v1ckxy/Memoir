@@ -1,0 +1,6 @@
+# Ignore Byte-compiled
+__pycache__
+
+# Ignore database files during commit
+storage/qdrant/*
+storage/sqlite/*

@@ -13,6 +13,7 @@ import random
 import gradio as gr
 import textwrap
 from datetime import datetime, timedelta
+from modules.logging_colors import logger
 from modules import chat, shared, utils
 from modules.text_generation import (
     decode,
@@ -25,7 +26,7 @@ import subprocess
 import itertools
 import time
 import json
-from python_on_whales import DockerClient
+import requests
 
 from extensions.Memoir.commandhandler import CommandHandler
 from extensions.Memoir.chathelper import ChatHelper
@@ -43,10 +44,20 @@ memoir_css = os.path.join(current_dir, "memoir.css")
 databasepath = os.path.join(current_dir, "storage/sqlite/")
 
 
+def module_exists(module_name):
+    try:
+        __import__(module_name)
+    except ImportError:
+        return False
+    else:
+        return True
+
+
 def save_params_to_file(arg):
     params_txt = os.path.join(current_dir, "memoir_config.json")
     with open(params_txt, 'w') as f:
-        json.dump(params, f)
+        json.dump(params, f, indent=4)
+        logger.info(f"[Memoir] Settings saved to {params_txt}")
     pass
 
 
@@ -54,6 +65,7 @@ def load_params_from_file(params_json):
     if os.path.exists(params_json):
         with open(params_json) as config_file:
             config = json.load(config_file)
+            logger.info(f"[Memoir] Settings loaded from {params_txt}")
     else:
         config = {}
     return config
@@ -319,7 +331,6 @@ def custom_generate_chat_prompt(user_input, state, **kwargs):
             params['dream_mode'] = 1
             bot_dream_persona = "You are " + str(params['ego_persona_name']) + ": " + str(params['ego_persona_details'])
             thinking_statement = str(params['ego_thinking_statement'])
-
             people = []
             memory_text = []
             emotions = []
@@ -405,9 +416,7 @@ def custom_css():
     """
     full_css = ''
     # use new scrollbars on main body
-
     full_css += open(memoir_css, 'r').read()
-
     return full_css
 
 
@@ -418,9 +427,7 @@ def custom_js():
     """
     full_js = ''
     # use new scrollbars on main body
-
     full_js += open(memoir_js, 'r').read()
-
     return full_js
 
 
@@ -432,17 +439,47 @@ def setup():
     https://github.com/qdrant/qdrant/releases
     As long as the server and port match in the memoir_config.json you should be good. Then comment out the docker stuff below or remove this entire function.
     """
-    qdrantdockerfile = os.path.join(current_dir, "qdrant-docker-compose.yml")
+    # Checks if docker libraries should be loaded or not
+    if params['verbose'] == True:
+        logger.info(f"[Memoir] 'use_docker' parameter is set as {params['use_docker']}")
 
-    # run the service
+    if params['use_docker'] == True and module_exists('python_on_whales'):
+        try:
+            from python_on_whales import DockerClient
+            qdrantdockerfile = os.path.join(current_dir, "qdrant-docker-compose.yml")
+            docker_qdrant = DockerClient(compose_files=[qdrantdockerfile])
+            docker_qdrant.compose.up(detach=True)
+
+            logger.info(f"[Memoir] Running the docker service...\nYou can modify the configuration in the docker-compose.yml file: {qdrantdockerfile}\nIf you get an error here it is most likely that you forgot to load docker.\nDocker Desktop is recommended.")
+        except Exception as e:
+            logger.error(f"[Memoir] Error {qdrantdockerfile}: {e}")
+    else:
+        logger.warning(f"[Memoir] 'use_docker' was set as {params['use_docker']}, however there was an error while loading 'python_on_whales' module, checking if qdrant server is available...")
+
+    # Checks if Qdrant server is reacheable and available
+    address = params['qdrant_address']
 
     try:
-        docker_qdrant = DockerClient(compose_files=[qdrantdockerfile])
-        docker_qdrant.compose.up(detach=True)
-
-        print(f"Running the docker service...you can modify this in the docker-compose.yml: {qdrantdockerfile} . If you get an error here it is most likely that you forgot to load docker. I recommend docker desktop.")
+        response = requests.get(address, timeout=3)
+        response.raise_for_status()
+    except requests.exceptions.RequestException as e:
+        logger.error(f'[Memoir] RequestException: {e}')
+    except requests.exceptions.HTTPError as e:
+        logger.error(f'[Memoir] HTTP Error: {e}')
+    except requests.exceptions.InvalidURL as e:
+        logger.error(f'[Memoir] Invalid URL: {e}')
+    except requests.exceptions.ConnectionError as e:
+        logger.error(f'[Memoir] Connection Error:{address}: {e}')
+    except requests.exceptions.Timeout as e:
+        logger.error(f'[Memoir] Timeout while connecting to {address}: {e}')
     except Exception as e:
-        print(f": Error {qdrantdockerfile}: {e}")
+        logger.error(f'[Memoir] There was an unhandled error while trying to connect to {address}: {e}')
+    else:
+        try:
+            if response.status_code == 200 and "qdrant" in response.json().get('title'):
+                logger.info(f'[Memoir] QDrant server is up and responding requests in {address}')
+        except:
+            logger.error(f'[Memoir] Please, check that the configuration contains a valid qdrant server.\nServer response header: {response.headers}\nServer response body: {response.text[0:256]}')
 
 
 def update_dreammode():
