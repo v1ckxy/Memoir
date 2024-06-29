@@ -12,6 +12,7 @@ import sqlite3
 import os
 import re
 
+
 class Persona:
     def __init__(self, db_name):
         self.db_name = db_name
@@ -38,15 +39,13 @@ class Persona:
             conn.commit()
             conn.close()
 
-       
     def calculate_sentiment_score(self, text):
         """Calculates the sentiment score of a given text using TextBlob."""
         blob = TextBlob(text)
         polarity_score = blob.sentiment.polarity  # Score between -1 (negative) and 1 (positive)
-        #print("SENTIMENT:" + str(blob.sentiment))
+        # print("SENTIMENT:" + str(blob.sentiment))
         return polarity_score
 
-  
     def get_stm_polarity_timeframe(self, start_datetime):
         """Queries the emotion entries in the database for a specified time frame."""
         conn = sqlite3.connect(self.db_name)
@@ -70,7 +69,7 @@ class Persona:
             else:
                 polarity_score = polarity_score + self.calculate_sentiment_score(f"{memory_text}")
         if num_rows > 0:
-            average_polarity_score = polarity_score/num_rows
+            average_polarity_score = polarity_score / num_rows
         else:
             average_polarity_score = 0
 

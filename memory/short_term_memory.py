@@ -9,9 +9,9 @@ Copyright (c) 2024 brucepro
 import sqlite3
 import os
 
+
 class ShortTermMemory:
-    def __init__(self,db_name):
-        
+    def __init__(self, db_name):
         self.db_name = db_name
         self.conn = None
         self.cursor = None
@@ -42,7 +42,7 @@ class ShortTermMemory:
         try:
             self.conn = sqlite3.connect(f'{self.db_name}')
             self.cursor = self.conn.cursor()
-            #print('Connected to the database!')
+            # print('Connected to the database!')
         except Exception as e:
             print(e)
 
@@ -51,7 +51,7 @@ class ShortTermMemory:
             if self.conn is not None and self.cursor is not None:
                 self.cursor = None
                 self.conn.close()
-                #print('Disconnected from the database!')
+                # print('Disconnected from the database!')
         except Exception as e:
             print(e)
 
@@ -62,19 +62,19 @@ class ShortTermMemory:
             values = (memory_text, people, memory_type, initiated_by, roleplay)
             self.cursor.execute(sql, values)
             self.conn.commit()
-            #print('Memory saved successfully!')
+            # print('Memory saved successfully!')
         except Exception as e:
             print(e)
         finally:
             self.disconnect()
 
-    def update_mem_saved_to_longterm(self,id):
+    def update_mem_saved_to_longterm(self, id):
         try:
             self.connect()
             sql = f"UPDATE short_term_memory SET saved_to_longterm=1 WHERE id={id}"
             self.cursor.execute(sql)
             self.conn.commit()
-            #print('Memory updated successfully!')
+            # print('Memory updated successfully!')
         except Exception as e:
             print(e)
         finally:

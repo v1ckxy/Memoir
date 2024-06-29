@@ -22,25 +22,25 @@ class File_Load():
     def read_file(self, file):
         load_file = Ingest_File(file)
         file_content = load_file.loadfile()
-        
-        #save to rag memory
+        # save to rag memory
         text_splitter = RecursiveCharacterTextSplitter(
-separators=["\n"], chunk_size=1000, chunk_overlap=100, keep_separator=False
-)
+            separators=["\n"], chunk_size=1000, chunk_overlap=100, keep_separator=False
+        )
         verbose = False
         ltm_limit = 2
+
         address = "http://localhost:6333"
-        rag = RagDataMemory(self.character_name,ltm_limit,verbose, address=address)
+        rag = RagDataMemory(self.character_name, ltm_limit, verbose, address=address)
+
         for document in file_content:
             splits = text_splitter.split_text(document.page_content)
-    
+
         for text in splits:
-             #print("----")
-             #print(text)
-             #print("----")
-             now = datetime.utcnow()
-             data_to_insert = str(text) + " reference:" + str(file)
-             doc_to_insert = {'comment': str(data_to_insert),'datetime': now}
-             rag.store(doc_to_insert)
+            # print("----")
+            # print(text)
+            # print("----")
+            now = datetime.utcnow()
+            data_to_insert = str(text) + " reference:" + str(file)
+            doc_to_insert = {'comment': str(data_to_insert), 'datetime': now}
+            rag.store(doc_to_insert)
         return f"[FILE_CONTENT={file}]\n{file_content}"
-    

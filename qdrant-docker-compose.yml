@@ -7,5 +7,3 @@ services:
       - "6333:6333"
     volumes:
           - './storage/qdrant:/app/qdrant:rw'
-
-
